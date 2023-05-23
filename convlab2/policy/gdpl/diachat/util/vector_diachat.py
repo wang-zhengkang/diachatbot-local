@@ -3,10 +3,7 @@ import os
 import json
 import numpy as np
 from convlab2.policy.vec import Vector
-from convlab2.policy.gdpl.diachat.util.lexicalize import delexicalize_da, lexicalize_da, deflat_da
-
-from convlab2.policy.gdpl.diachat.util.state import default_state
-
+from convlab2.policy.gdpl.diachat.util.lexicalize import delexicalize_da, deflat_da
 from convlab2.policy.gdpl.diachat.util.state_structure import belief_state_vectorize
 from convlab2.policy.gdpl.diachat.util.domain_act_slot import *
 
@@ -14,12 +11,16 @@ class DiachatVector(Vector):
 
     def __init__(self, sys_da_file, usr_da_file, character='sys', vocab_size=500):
 
-        self.belief_domains = ['饮食', '行为', '运动', '治疗', '问题', '基本信息', 'none']
+        self.domains = ['饮食', '行为', '运动', '治疗', '问题', '基本信息']
         self.vocab_size = vocab_size
 
         # self.da_voc为系统端动作，self.da_voc_opp为用户端动作
         self.da_voc = json.load(open(sys_da_file, encoding='UTF-8'))
         self.da_voc_opp = json.load(open(usr_da_file, encoding='UTF-8'))
+        
+        self.askfor_ds = json.load(open('convlab2/policy/gdpl/diachat/data/askfor_ds.json', encoding='UTF-8'))
+        self.askforsure_ds = json.load(open('convlab2/policy/gdpl/diachat/data/askforsure_ds.json', encoding='UTF-8'))
+        
         self.character = character
         self.generate_dict()
         self.cur_domain = None
@@ -45,13 +46,17 @@ class DiachatVector(Vector):
         """
         init the dict for mapping state/action into vector
         """
+        # sys_action
         self.act2vec = dict((a, i) for i, a in enumerate(self.da_voc))
         self.vec2act = dict((v, k) for k, v in self.act2vec.items())
         self.da_dim = len(self.da_voc)
+
+        # usr_action
         self.opp2vec = dict((a, i) for i, a in enumerate(self.da_voc_opp))
         self.vec2opp = dict((v, k) for k, v in self.opp2vec.items())
         self.da_opp_dim = len(self.da_voc_opp)
 
+        # belief_state
         self.belief_state_domainslot2id = dict()  # 没啥用
         self.belief_state_id2domainslot = dict()  # 没啥用
         self.belief_state_dim = 0
@@ -70,8 +75,27 @@ class DiachatVector(Vector):
                     self.belief_state_domainslot2id[domain]['建议'] = domain_slots2id[domain]
                     self.belief_state_id2domainslot[domain]['建议'] = id2domain_slots[domain]
                     self.belief_state_dim += len(domain_slots2id[domain])
+        
+        # cur_domain
+        self.domain2id = dict((a, i) for i, a in enumerate(self.domains))
+        self.id2domain = dict((i, a) for i, a in enumerate(self.domains))
+        self.domain_dim = len(self.domains)
 
-        self.state_dim = self.da_dim + self.da_opp_dim + self.belief_state_dim + 1  # 186+152+104+1=443
+        # askfor_dsv 不关注value值
+        self.askfor_ds2vec = dict((a, i) for i, a in enumerate(self.askfor_ds))
+        self.vec2askfor_ds = dict((v, k) for k, v in self.askfor_ds2vec.items())
+        self.askfor_ds_dim = len(self.askfor_ds)
+
+        # askforsure_dsv 不关注value值
+        self.askforsure_ds2vec = dict((a, i) for i, a in enumerate(self.askforsure_ds))
+        self.vec2askforsure_ds = dict((v, k) for k, v in self.askforsure_ds2vec.items())
+        self.askforsure_ds_dim = len(self.askforsure_ds)
+
+        # 
+        self.state_dim = self.da_dim + self.da_opp_dim + self.belief_state_dim + \
+            + self.domain_dim + self.askfor_ds_dim + self.askforsure_ds_dim + 1
+        
+
 
     def pointer(self, turn):
         pointer_vector = np.zeros(6 * len(self.db_domains))
@@ -150,15 +174,40 @@ class DiachatVector(Vector):
         for a in da:
             if a in self.act2vec:
                 sys_act_vec[self.act2vec[a]] = 1.
+        
+        cur_domain_vec = np.zeros(self.domain_dim)
+        for domain in state["cur_domain"]:
+            if domain in self.domains:
+                cur_domain_vec[self.domain2id[domain]] = 1.
+        
+        askfor_dsv_vec = np.zeros(self.askfor_ds_dim)
+        for askfor_dsv in state["askfor_dsv"]:
+            d = askfor_dsv[0]
+            s = askfor_dsv[1]
+            ds = '-'.join((d, s))
+            if ds in self.askfor_ds2vec:
+                askfor_dsv_vec[self.askfor_ds2vec[ds]] = 1.
 
-        final = 1. if state['terminated'] else 0.
+        askforsure_dsv_vec = np.zeros(self.askforsure_ds_dim)
+        for askforsure_dsv in state["askforsure_dsv"]:
+            d = askforsure_dsv[0]
+            s = askforsure_dsv[1]
+            ds = '-'.join((d, s))
+            if ds in self.askforsure_ds2vec:
+                askforsure_dsv_vec[self.askforsure_ds2vec[ds]] = 1.
+
+
+        terminated_vec = 1. if state['terminated'] else 0.
 
         belief_state_vec = belief_state_vectorize(state['belief_state'])
         state_vec = np.r_[
-        usr_act_vec,  # usr act+domain+slot
         sys_act_vec,  # sys act+domain+slot
+        usr_act_vec,  # usr act+domain+slot
         belief_state_vec,  # belief state
-        final]
+        cur_domain_vec,
+        askfor_dsv_vec,
+        askforsure_dsv_vec,
+        terminated_vec]
 
         return state_vec
 
@@ -192,15 +241,6 @@ class DiachatVector(Vector):
             if idx == 1:
                 act_array.append(self.vec2act[i])
         action = deflat_da(act_array)
-        
-        # entities = {}
-        # for domint in action:
-        #     domain, intent = domint.split('-')
-        #     if domain not in entities and domain.lower() not in ['general', 'booking']:
-        #         entities[domain] = self.dbquery_domain(domain)
-        # if self.cur_domain and self.cur_domain not in entities:
-        #     entities[self.cur_domain] = self.dbquery_domain(self.cur_domain)
-        # action = lexicalize_da(action, entities, self.state, self.requestable, self.cur_domain)
         return action
 
     def action_vectorize(self, action):

@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-@author: truthless
-"""
 import os
 import logging
 import json
@@ -12,6 +8,7 @@ from torch import optim
 import torch.utils.data as data
 from convlab2.util.train_util import to_device
 from convlab2.policy.vector.dataset import ActStateDataset
+
 from convlab2.policy.gdpl.diachat.loader.loader import ActMLEPolicyDataLoaderDiachat
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")

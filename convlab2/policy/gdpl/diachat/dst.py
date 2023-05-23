@@ -1,9 +1,9 @@
 from convlab2.dst import DST
-from convlab2.policy.gdpl.diachat.processed_data.state_structure import default_state, validate_domain_group
+from convlab2.policy.gdpl.diachat.util.state_structure import default_state, validate_domain_group
 from copy import deepcopy
 from pprint import pprint
 import json
-from convlab2.util.diachat.domain_act_slot import act_labels
+
 INTENT = {"Inform": "现状", "Advice": "建议", "AdviceNot": "建议", "Explanation": "解释"}
 
 
@@ -49,9 +49,9 @@ class RuleDST(DST):
                         new_entry[slot] = value
                         self.state['belief_state'][domain][label].append(new_entry)
                 elif act == 'AskFor':
-                    self.state['askfor_slots'].append([domain, slot, value])
+                    self.state['askfor_dsv'].append([domain, slot, value])
                 elif act == 'AskForSure':
-                    self.state['askforsure_slotvs'].append([domain, slot, value])
+                    self.state['askforsure_dsv'].append([domain, slot, value])
 
     def update(self, usr_da=None):
         # update usr_action
@@ -59,18 +59,13 @@ class RuleDST(DST):
         sys_da = self.state['sys_action']
 
         # update cur_domain
-        domain_array = []
+        # update前清空一下
+        self.state['cur_domain'] = []
         for da in usr_da:
-            if da[1] not in domain_array:
-                domain_array.append(da[1])
-        self.state['cur_domain'] = "-".join(domain_array)
+            if da[1] not in self.state['cur_domain']:
+                self.state['cur_domain'].append(da[1])
 
-        # DONE: clean ask slot  ---> AskFor AskForSure
-        # for domain, slot, value in deepcopy(self.state['askfor_slots']) + deepcopy(self.state['askforsure_slotvs']):
-        #     if [domain, slot] in [x[1:3] for x in sys_da if x[0] in act_labels['doctor_act']]:
-        #         self.state['ask_slots'].remove([domain, slot, value])
-
-        # 更新 belief_state  askfor_slots askforsure_slotvs
+        # update belief_state askfor_slots askforsure_slotvs
         self.update_belief_state(usr_da)
         return self.state
 

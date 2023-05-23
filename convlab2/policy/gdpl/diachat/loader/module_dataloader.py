@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pprint import pprint
-from convlab2.util.dataloader.dataset_dataloader import DatasetDataloader, MultiWOZDataloader
+from convlab2.policy.gdpl.diachat.loader.dataset_dataloader import DatasetDataloader
 
 
 class ModuleDataloader(ABC):
@@ -61,11 +61,6 @@ class UserDSTDataloader(ModuleDataloader):
 
 class ActPolicyDataloader(ModuleDataloader):
     def load_data(self, *args, **kwargs):
-        kwargs.setdefault('belief_state', True)
-        kwargs.setdefault('dialog_act', True)
-        kwargs.setdefault('terminated', True)
-        kwargs.setdefault('context_dialog_act', True)
-        kwargs.setdefault('context_window_size', 2)
         return self.dataset_dataloader.load_data(*args, **kwargs)
 
 
@@ -104,9 +99,9 @@ class MultiTurnNLGDataloader(ModuleDataloader):
         return self.dataset_dataloader.load_data(*args, **kwargs)
 
 
-if __name__ == '__main__':
-    d = MultiTurnNLUDataloader(dataset_dataloader=MultiWOZDataloader())
-    data = d.load_data(data_key='val', role='usr')
-    pprint(data['val']['utterance'][:5])
-    pprint(data['val']['context'][:5])
-    pprint(data['val']['dialog_act'][:5])
+# if __name__ == '__main__':
+#     d = MultiTurnNLUDataloader(dataset_dataloader=MultiWOZDataloader())
+#     data = d.load_data(data_key='val', role='usr')
+#     pprint(data['val']['utterance'][:5])
+#     pprint(data['val']['context'][:5])
+#     pprint(data['val']['dialog_act'][:5])

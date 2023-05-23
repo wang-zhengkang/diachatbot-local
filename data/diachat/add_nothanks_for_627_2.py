@@ -6,7 +6,7 @@
 import json
 from pprint import pprint
 
-with open('data/diachat/annotations_20220627_2.json', 'r', encoding='utf-8') as fp:
+with open("data/diachat/annotations_20220627_2.json", "r", encoding="utf-8") as fp:
     full_data = json.load(fp)
     new_file_data = []
     add_list = []
@@ -20,27 +20,26 @@ with open('data/diachat/annotations_20220627_2.json', 'r', encoding='utf-8') as 
         if utterances_num % 2 != 0:
             # add_list用于检查是否add成功
             add_list.append(conversationId)
-            session["utterances"].append({
-                "utteranceId": utteranceId,
-                "conversationId": conversationId,
-                "sequenceNo": utterances_num + 1,
-                "utterance": "不客气",
-                "agentRole": "Doctor",
-                "annotation": [
-                    {
-                        "act_label": "Chitchat",
-                        "slot_values": [
-                            {
-                                "domain": "",
-                                "slot": "",
-                                "value": "",
-                                "pos": ""
-                            }
-                        ]
-                    }
-                ]
-            })
+            session["utterances"].append(
+                {
+                    "utteranceId": utteranceId,
+                    "conversationId": conversationId,
+                    "sequenceNo": utterances_num + 1,
+                    "utterance": "不客气",
+                    "agentRole": "Doctor",
+                    "annotation": [
+                        {
+                            "act_label": "Chitchat",
+                            "slot_values": [
+                                {"domain": "", "slot": "", "value": "", "pos": ""}
+                            ],
+                        }
+                    ],
+                }
+            )
         new_file_data.append(session)
     pprint(add_list)
-    with open('data/diachat/annotations_nothanks.json', mode='w', encoding='utf-8') as f:
+    with open(
+        "data/diachat/annotations_nothanks.json", mode="w", encoding="utf-8"
+    ) as f:
         f.write(json.dumps(new_file_data, ensure_ascii=False))

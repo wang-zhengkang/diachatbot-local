@@ -11,9 +11,9 @@ from torch import multiprocessing as mp
 from convlab2.dialog_agent.agent import PipelineAgent
 from convlab2.dialog_agent.env import Environment
 from convlab2.policy.gdpl.diachat.dst import RuleDST
-from convlab2.policy.vhus.diachat_DynamicGoal.vhus_diachat import UserPolicyVHUS
 from convlab2.policy.gdpl.diachat.gdpl import GDPL
 from convlab2.policy.gdpl.diachat.estimator import RewardEstimator
+from convlab2.policy.vhus.diachat_DynamicGoal.vhus_diachat import UserPolicyVHUS
 from convlab2.policy.rlmodule import Memory
 from argparse import ArgumentParser
 

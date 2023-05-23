@@ -34,7 +34,6 @@ domain_slots={
         '持续时长',
         '血糖值',
         '时间',
-#         '影响问题'
       ],
       '饮食': [
         '饮食名',
@@ -42,7 +41,6 @@ domain_slots={
         '饮食量',
         '成分',
         '成份量',
-#         '影响问题',
         '效果'
       ],
       '运动': [
@@ -51,7 +49,6 @@ domain_slots={
         '时间',
         '持续时长',
         '强度',
-#         '影响问题',
         '效果'
       ],
       '行为': [
@@ -59,18 +56,16 @@ domain_slots={
         '频率',
         '时间',
         '持续时长',
-#         '影响问题',
         '效果'
       ],
       '治疗': [
         '药品',
         '用药量',
-        '用药（治疗）频率',
+        '用药治疗频率',
         '时间',
         '持续时长',
         '适应症',
         '药品类型',
-#         '影响问题',
         '治疗名',
         '部位',
         '检查项',
@@ -85,6 +80,4 @@ id2domain_slots=dict()
 for d,slots in domain_slots.items():
     domain_slots2id[d] = dict((slots[i], i) for i in range(len(slots)))
     id2domain_slots[d] = dict((i, slots[i]) for i in range(len(slots)))
-        
-# print(domain_slots2id)
-# print(id2domain_slots)
+    
