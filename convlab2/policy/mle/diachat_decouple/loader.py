@@ -67,6 +67,7 @@ class PolicyDataLoaderDiachat():
                     training_Y = self.vector.action_vectorize(sys_action)
                     self.data.append([training_X, training_Y])
                     dst.state['sys_action'] = sys_action
+        pass
         
 
     def _load_data(self, processed_dir):

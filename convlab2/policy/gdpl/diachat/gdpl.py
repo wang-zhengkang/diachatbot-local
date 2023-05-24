@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import torch
 from torch import optim
 import torch.nn as nn
@@ -265,17 +264,17 @@ class GDPL(Policy):
                 )
                 break
 
-    def load_from_pretrained(self, archive_file, model_file, filename):
-        if not os.path.isfile(archive_file):
-            if not model_file:
-                raise Exception("No model for GDPL Policy is specified!")
-            archive_file = cached_path(model_file)
-        model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "save")
-        if not os.path.exists(model_dir):
-            os.mkdir(model_dir)
-        if not os.path.exists(os.path.join(model_dir, "best_gdpl.pol.mdl")):
-            archive = zipfile.ZipFile(archive_file, "r")
-            archive.extractall(model_dir)
+    def load_from_pretrained(self, archive_file='', model_file='', filename='499'):
+        # if not os.path.isfile(archive_file):
+        #     if not model_file:
+        #         raise Exception("No model for GDPL Policy is specified!")
+        #     archive_file = cached_path(model_file)
+        # model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "save")
+        # if not os.path.exists(model_dir):
+        #     os.mkdir(model_dir)
+        # if not os.path.exists(os.path.join(model_dir, "best_gdpl.pol.mdl")):
+        #     archive = zipfile.ZipFile(archive_file, "r")
+        #     archive.extractall(model_dir)
 
         policy_mdl = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), filename + "_gdpl.pol.mdl"

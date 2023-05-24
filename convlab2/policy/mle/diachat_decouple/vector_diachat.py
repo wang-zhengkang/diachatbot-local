@@ -1,8 +1,8 @@
 import json
 import numpy as np
-from convlab2.policy.vec import Vector
-from convlab2.policy.mle.diachat_decouple.util.domain_act_slot import *
-from convlab2.policy.mle.diachat_decouple.util.dexicalize import delexicalize_da
+from convlab2.dpl.vec import Vector
+from convlab2.dpl.etc.util.domain_act_slot import *
+from convlab2.dpl.etc.util.dexicalize import delexicalize_da
 
 
 class DiachatVector(Vector):
@@ -15,12 +15,11 @@ class DiachatVector(Vector):
         self.sys_ad_voc = json.load(open(sys_ad_file, encoding='UTF-8'))
         self.usr_ad_voc = json.load(open(usr_ad_file, encoding='UTF-8'))
         
-        self.sys_act = doctor_act
+        self.sys_act = sys_act
         self.usr_act = usr_act
 
-        self.all_domain = all_domain
-        # self.all_domain.append('none')
-
+        self.all_domain = domain
+        
         self.generate_dict()
 
     def generate_dict(self):

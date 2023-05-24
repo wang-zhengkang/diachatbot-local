@@ -9,6 +9,7 @@ if __name__ == '__main__':
     dst = RuleDST()
     dst.init_session()
     sys = GDPL()
+    sys.load_from_pretrained()
     usr = UserPolicyVHUS(load_from_zip=True)
     usr.init_session()
 
