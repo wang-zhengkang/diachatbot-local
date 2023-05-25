@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import torch
 import os
 import json
@@ -15,9 +14,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class MLE(Policy):
 
-    def __init__(self):
-        root_dir = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+    def __init__(self, is_load_model=False):
 
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json'), 'r') as f:
             cfg = json.load(f)
@@ -25,16 +22,19 @@ class MLE(Policy):
         self.vector = DiachatVector()
 
         self.policy = MultiDiscretePolicy(self.vector.state_dim, cfg['h_dim'], self.vector.sys_da_dim).to(
-            device=DEVICE)  # 三层模型
+            device=DEVICE)
+        
+        if is_load_model:
+            self.load_from_pretrained(cfg['load'])
 
-        self.load_from_pretrained(cfg['load'])
         self.simpleInfer = SimpleInference()
 
     def load_from_pretrained(self, filename):
-        policy_mdl = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename + '_mle.pol.mdl')
-        if os.path.exists(policy_mdl):
-            self.policy.load_state_dict(torch.load(policy_mdl, map_location=DEVICE))
-            logging.info('<<dialog policy>> loaded checkpoint from file: {}'.format(policy_mdl))
+        if os.path.exists(filename):
+            self.policy.load_state_dict(torch.load(filename, map_location=DEVICE))
+            logging.info('<<dialog policy>> loaded checkpoint from file: {}'.format(filename))
+        else:
+            print("模型文件不存在")
 
     def format_action_arrays(self, actions):
         arry_actions = []
@@ -55,15 +55,12 @@ class MLE(Policy):
         Returns:
             action : System act, with the form of (act_type, {slot_name_1: value_1, slot_name_2, value_2, ...})
         """
-        # s_vec = torch.Tensor(self.vector.state_vectorize(state))
-        s_vec = torch.Tensor(state)
+        s_vec = torch.Tensor(self.vector.state_vectorize(state))
         a = self.policy.select_action(s_vec.to(device=DEVICE), False).cpu()
         action = self.vector.action_devectorize(a.detach().numpy())
-
-        # action = self.format_action_arrays(action)
-
+        if action == []:
+            action = [['chitchat', 'none', 'none', 'none']]
         # actionArry, anntActions = self.infer(state, action)
-
         # state['system_action'] = actionArry  # 单独评价或者测试policy的时候把这句注释掉
         # return anntActions, action  # 第一个是调用推理后的，第二个是policy给出的
         return action  # 第一个是调用推理后的，第二个是policy给出的

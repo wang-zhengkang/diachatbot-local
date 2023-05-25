@@ -19,8 +19,8 @@ class GoalGenerator:
     def get_user_goal(self):
         sessions = json.load(open(self.corpus_path, encoding='UTF-8'))
         # 固定session 用于其它模块的测试
-        session = sessions[0]
-        # session = random.choice(sessions)
+        # session = sessions[528]
+        session = random.choice(sessions)
         goal = session.get('goal', [])
         user_goal = UserDataManager.change_goal_form(goal)
         return user_goal

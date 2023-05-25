@@ -7,21 +7,22 @@ import torch.nn as nn
 from torch import optim
 import torch.utils.data as data
 from convlab2.util.train_util import to_device
+
 from convlab2.policy.vector.dataset import ActStateDataset
 
-from convlab2.policy.gdpl.diachat.loader.loader import ActMLEPolicyDataLoaderDiachat
+from convlab2.dpl.etc.util.vector_diachat import DiachatVector
+from convlab2.dpl.etc.loader.estimator_dataloader import EstimatorDataLoader
+# from convlab2.policy.gdpl.diachat.loader.loader import ActMLEPolicyDataLoaderDiachat
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class RewardEstimator(object):
-    def __init__(self, vector, pretrain=True):
+    def __init__(self, pretrain=False):
         with open('convlab2/policy/gdpl/diachat/config.json', 'r') as f:
             cfg = json.load(f)
-        # self.irl包含self.g和self.h两个线性网络
-        # self.g 入度vector.state_dim442+vector.da_dim186 出度1
-        # self.h 入度vector.state_dim442 出度1
-        self.irl = AIRL(cfg['gamma'], cfg['hi_dim'], vector.state_dim, vector.da_dim).to(device=DEVICE)
+        vector = DiachatVector()
+        self.irl = AIRL(cfg['gamma'], cfg['hi_dim'], vector.state_dim, vector.sys_da_dim).to(device=DEVICE)
         self.bce_loss = nn.BCEWithLogitsLoss()
         self.step = 0
         self.anneal = cfg['anneal']
@@ -34,7 +35,7 @@ class RewardEstimator(object):
         self.optim_batchsz = cfg['batchsz']
         self.irl.eval()
 
-        manager = ActEstimatorDataLoaderDiachat()  # Diachat动作评价器数据加载
+        manager = EstimatorDataLoader()
         
         if pretrain:
             self.data_train = manager.create_dataset_irl('train', cfg['batchsz'])
@@ -247,26 +248,26 @@ class AIRL(nn.Module):
         return weights
 
 
-class ActEstimatorDataLoaderDiachat(ActMLEPolicyDataLoaderDiachat):
-    def __init__(self):
-        super(ActEstimatorDataLoaderDiachat, self).__init__()
+# class ActEstimatorDataLoaderDiachat(ActMLEPolicyDataLoaderDiachat):
+#     def __init__(self):
+#         super(ActEstimatorDataLoaderDiachat, self).__init__()
 
-    def create_dataset_irl(self, part, batchsz):
-        print('Start creating {} irl dataset'.format(part))
-        s = []
-        a = []
-        next_s = []
-        for i, item in enumerate(self.data[part]):
-            s.append(torch.Tensor(item[0]))
-            a.append(torch.Tensor(item[1]))
-            if item[0][-1]:  # terminated
-                next_s.append(torch.Tensor(item[0]))
-            else:
-                next_s.append(torch.Tensor(self.data[part][i + 1][0]))
-        s = torch.stack(s)
-        a = torch.stack(a)
-        next_s = torch.stack(next_s)
-        dataset = ActStateDataset(s, a, next_s)
-        dataloader = data.DataLoader(dataset, batchsz, True)
-        print('Finish creating {} irl dataset'.format(part))
-        return dataloader
+#     def create_dataset_irl(self, part, batchsz):
+#         print('Start creating {} irl dataset'.format(part))
+#         s = []
+#         a = []
+#         next_s = []
+#         for i, item in enumerate(self.data[part]):
+#             s.append(torch.Tensor(item[0]))
+#             a.append(torch.Tensor(item[1]))
+#             if item[0][-1]:  # terminated
+#                 next_s.append(torch.Tensor(item[0]))
+#             else:
+#                 next_s.append(torch.Tensor(self.data[part][i + 1][0]))
+#         s = torch.stack(s)
+#         a = torch.stack(a)
+#         next_s = torch.stack(next_s)
+#         dataset = ActStateDataset(s, a, next_s)
+#         dataloader = data.DataLoader(dataset, batchsz, True)
+#         print('Finish creating {} irl dataset'.format(part))
+#         return dataloader

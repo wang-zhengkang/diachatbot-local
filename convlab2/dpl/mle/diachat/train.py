@@ -9,7 +9,7 @@ from convlab2.util.train_util import to_device, init_logging_handler
 
 from convlab2.dpl.rlmodule import MultiDiscretePolicy
 from convlab2.dpl.etc.util.vector_diachat import DiachatVector
-from convlab2.dpl.etc.loader.loader_standar import PolicyDataloader
+from convlab2.dpl.etc.loader.policy_dataloader import PolicyDataloader
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 skf = KFold(n_splits=10, shuffle=True, random_state=2023)
@@ -28,10 +28,7 @@ class MLE_Trainer():
         self.epoch = cfg['epoch']
         self.lr = cfg['lr']
         self.h_dim = cfg['h_dim']
-        logging.info(f'batchsz:{self.batchsz}')
-        logging.info(f'epoch:{self.epoch}')
-        logging.info(f'lr:{self.lr}')
-        logging.info(f'h_dim:{self.h_dim}')
+        
         self.fold = fold
         self.kfold_info = {
             'F1': float,
@@ -40,18 +37,20 @@ class MLE_Trainer():
         }
 
         self.manager = PolicyDataloader()
-        self.data_train = self.manager.create_dataset(
-            'train', cfg['batchsz'], train_idx)
+        self.data_train = self.manager.create_dataset('train', cfg['batchsz'], train_idx)
+        
+        # 如果不使用全部数据训练 则创建测试集
         if not is_train_all:
-            self.data_test = self.manager.create_dataset(
-                'test', cfg['batchsz'], test_idx)
+            self.data_test = self.manager.create_dataset('test', cfg['batchsz'], test_idx)
 
         self.policy = MultiDiscretePolicy(vector.state_dim, cfg['h_dim'], vector.sys_da_dim).to(
             device=DEVICE)
         self.policy.eval()
-        self.policy_optim = torch.optim.Adam(
-            self.policy.parameters(), lr=cfg['lr'])  # torch.optim指定以adam作为优化器
-        self.multi_entropy_loss = nn.MultiLabelSoftMarginLoss()  # 指定损失函数为多标签分类损失
+
+        # torch.optim指定以adam作为优化器
+        self.policy_optim = torch.optim.Adam(self.policy.parameters(), lr=cfg['lr'])
+        # 指定损失函数为多标签分类损失
+        self.multi_entropy_loss = nn.MultiLabelSoftMarginLoss()
 
     def policy_loop(self, data):
         s, target_a = to_device(data)
@@ -73,14 +72,14 @@ class MLE_Trainer():
             loss_a.backward()  # 通过反向传播过程来实现可训练参数的更新
             self.policy_optim.step()
 
-            if (i + 1) % self.print_per_batch == 0:
-                a_loss /= self.print_per_batch  # 400轮训练后平均损失
-                logging.debug(
-                    '<<DPL-MLE>> epoch {}, iter {}, loss_a:{}'.format(epoch, i, a_loss))
-                a_loss = 0.
+            if not is_train_all:
+                if (i + 1) % self.print_per_batch == 0:
+                    a_loss /= self.print_per_batch
+                    logging.debug('<<DPL-MLE>> epoch {}, iter {}, loss_a:{}'.format(epoch, i, a_loss))
+                    a_loss = 0.
 
         if epoch == self.epoch:
-            self.save(self.save_dir, is_train_all)  # 保存一下训练的模型，以mdl模式
+            self.save(self.save_dir, is_train_all)  # 以.mdl保存模型
         self.policy.eval()
 
     def imit_test(self, epoch, best):
@@ -93,8 +92,7 @@ class MLE_Trainer():
             a_loss += loss_a.item()
 
         a_loss /= len(self.data_valid)
-        logging.debug(
-            '<<DPL-MLE>> val, epoch {}, loss_a:{}'.format(epoch, a_loss))
+        logging.debug('<<DPL-MLE>> val, epoch {}, loss_a:{}'.format(epoch, a_loss))
         if a_loss < best:
             logging.info('<<DPL-MLE>> best model saved')
             best = a_loss
@@ -106,8 +104,7 @@ class MLE_Trainer():
             a_loss += loss_a.item()
 
         a_loss /= len(self.data_test)
-        logging.debug(
-            '<<DPL-MLE>> test, epoch {}, loss_a:{}'.format(epoch, a_loss))
+        logging.debug('<<DPL-MLE>> test, epoch {}, loss_a:{}'.format(epoch, a_loss))
         return best
 
     def test(self):
@@ -146,21 +143,14 @@ class MLE_Trainer():
         logging.info(f'precise={precise: .6f}, recall={recall: .6f}')
 
     def save(self, directory, is_train_all=False):
+        if not os.path.exists(directory):
+                os.makedirs(directory)
+
         if is_train_all:
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-
-            torch.save(self.policy.state_dict(), directory +
-                       '/' + 'train_all_data' + '_mle.pol.mdl')
-
-            logging.info(
-                '<<DPL-MLE>> saved {} fold network to mdl'.format(self.fold))
+            print("sava train_all_mle.pol.mdl")
+            torch.save(self.policy.state_dict(), directory + '/' + 'train_all' + '_mle.pol.mdl')
         else:
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-
-            torch.save(self.policy.state_dict(), directory +
-                       '/' + str(self.fold) + '_fold_mle.pol.mdl')
+            torch.save(self.policy.state_dict(), directory + '/' + str(self.fold) + '_fold_mle.pol.mdl')
 
             logging.info(
                 '<<DPL-MLE>> saved {} fold network to mdl'.format(self.fold))
@@ -177,59 +167,79 @@ if __name__ == '__main__':
         cfg = json.load(f)
     with open('convlab2/dpl/etc/data/complete_data.json', 'r') as fp:
         data = json.load(fp)
-        data_idx = range(2425)
+        data_idx = range(len(data))
 
     init_logging_handler(cfg['log_dir'])
+    batchsz = cfg['batchsz']
+    epoch = cfg['epoch']
+    lr = cfg['lr']
+    h_dim = cfg['h_dim']
+
+
     total_F1 = 0.
     total_precise = 0.
     total_recall = 0.
+    best_F1 = 0.
+    worst_F1 = 0.
+    best_F1_fold = 1
+    worst_F1_fold = 1
+
     start = int(time.time())
-    # True: 直接将全部数据集加入训练   False: 进行十折交叉验证后再将全部数据集加入训练
-    is_train_all = False
+
+    for fold, (train_idx, test_idx) in enumerate(skf.split(data_idx)):
+        fold += 1
+        agent = MLE_Trainer(cfg, fold, train_idx, test_idx)
+        logging.info(f"--------------第{fold}折交叉训练--------------")
+        for e in range(cfg['epoch']):
+            agent.imitating(e+1)
+        agent.test()
+        if fold == 1:
+            best_F1 = agent.kfold_info['F1']
+            worst_F1 = agent.kfold_info['F1']
+        else:
+            if best_F1 < agent.kfold_info['F1']:
+                best_F1 = agent.kfold_info['F1']
+                best_F1_fold = fold
+            if worst_F1 > agent.kfold_info['F1']:
+                worst_F1 = agent.kfold_info['F1']
+                worst_F1_fold = fold
+        total_F1 += agent.kfold_info['F1']
+        total_precise += agent.kfold_info['precise']
+        total_recall += agent.kfold_info['recall']
+        avg_F1 = total_F1 / fold
+        avg_precise = total_precise / fold
+        avg_recall = total_recall / fold
+        logging.info(f"{fold}折平均F1:{avg_F1: .6f}")
+        logging.info(f"{fold}折平均precise:{avg_precise: .6f}")
+        logging.info(f"{fold}折平均recall:{avg_recall: .6f}")
+
+    is_train_all = True  # 是否使用全部数据进行训练
     if is_train_all:
-        # 将全部数据集加入训练  train_idx为所有数据
-        agent = MLE_Trainer(cfg, fold='all', train_idx=[
-                            i for i in data_idx], test_idx=[], is_train_all=True)
+        print(f"\nuse all data to train: pls waiting...")
+        agent = MLE_Trainer(cfg, fold='all', train_idx=[i for i in data_idx],
+                            test_idx=[], is_train_all=True)
         for e in range(cfg['epoch']):
             agent.imitating(e+1, is_train_all)
-    else:
-        for fold, (train_idx, test_idx) in enumerate(skf.split(data_idx)):
-            fold += 1
-            agent = MLE_Trainer(cfg, fold, train_idx, test_idx)
-            logging.info(f"--------------第{fold}折交叉训练--------------")
-            for e in range(cfg['epoch']):
-                agent.imitating(e+1)
-            agent.test()
-            total_F1 += agent.kfold_info['F1']
-            total_precise += agent.kfold_info['precise']
-            total_recall += agent.kfold_info['recall']
-            avg_F1 = total_F1 / fold
-            avg_precise = total_precise / fold
-            avg_recall = total_recall / fold
-            logging.info(f"{fold}折平均F1:{avg_F1: .6f}")
-            logging.info(f"{fold}折平均precise:{avg_precise: .6f}")
-            logging.info(f"{fold}折平均recall:{avg_recall: .6f}")
-        logging.info(f"--------------use all data to train--------------")
-        is_train_all = True
-        agent = MLE_Trainer(cfg, fold='all', train_idx=[
-                            i for i in data_idx], test_idx=[], is_train_all=True)
-        for e in range(cfg['epoch']):
-            agent.imitating(e+1, is_train_all)
-        end = int(time.time())
-        m, s = divmod(end - start, 60)
-        # logging.info(f"Train model cost time {h:0>2d}:{m:0>2d}:{s:0>2d}.")
-        # logging.info(f"--------------Statistics info start---------------")
-        # logging.info(f'batchsz:{batchsz}')
-        # logging.info(f'epoch:{epoch}')
-        # logging.info(f'lr:{lr}')
-        # logging.info(f'hu_dim:{hu_dim}')
-        # logging.info(f'eu_dim:{eu_dim}')
-        # logging.info(f'alpha:{alpha}')
-        # logging.info(f'random_state:34')
-        # logging.info('action structure(modify train.test.sequential!):ads* or a-ds')
-        # logging.info('Bi-GRU:none* or Bi-Decode or Bi-Encode or Bi-De&En')
-        # logging.info(f"avg F1:{avg_F1: .6f}")
-        # logging.info(f"best F1:{best_F1: .6f}, best F1 fold:{best_F1_fold}")
-        # logging.info(f"worst F1:{worst_F1: .6f}, worst F1 fold:{worst_F1_fold}")
-        # logging.info(f"--------------Statistics info finish--------------")
+        print("use all data to train: complete")
+    
+    end = int(time.time())
+    m, s = divmod(end - start, 60)
+    h, m = divmod(m, 60)
+
+    logging.info(f"Train model cost time {h:0>2d}:{m:0>2d}:{s:0>2d}.")
+    logging.info(f"--------------Statistics info start---------------")
+    logging.info(f'batchsz:{batchsz}')
+    logging.info(f'epoch:{epoch}')
+    logging.info(f'lr:{lr}')
+    logging.info(f'h_dim:{h_dim}')
+    logging.info(f'random_state:2023')
+    logging.info(f"avg F1:{avg_F1: .6f}")
+    logging.info(f"avg precise:{total_precise/10: .6f}")
+    logging.info(f"avg recall:{total_recall/10: .6f}")
+    logging.info(f"best F1:{best_F1: .6f}, best F1 fold:{best_F1_fold}")
+    logging.info(f"worst F1:{worst_F1: .6f}, worst F1 fold:{worst_F1_fold}")
+    logging.info(f"--------------Statistics info finish--------------")
+
+        
+        
     

@@ -1,31 +1,33 @@
 import os
-import json
-import pickle
 import torch
-from copy import deepcopy
-from convlab2.util.file_util import read_zipped_json
 import torch.utils.data as data
 
-from convlab2.dpl.etc.util.dst import RuleDST
-from convlab2.dpl.etc.util.state_structure import *
+from convlab2.util.file_util import read_zipped_json
+from convlab2.dpl.etc.util.state_structure import default_state
 from convlab2.dpl.etc.util.vector_diachat import DiachatVector
+from convlab2.dpl.etc.util.dst import RuleDST
 
+class ActStateDataset(data.Dataset):
+    def __init__(self, s_s, a_s, next_s):
+        self.s_s = s_s
+        self.a_s = a_s
+        self.next_s = next_s
+        self.num_total = len(s_s)
+    
+    def __getitem__(self, index):
+        s = self.s_s[index]
+        a = self.a_s[index]
+        next_s = self.next_s[index]
+        return s, a, next_s
+    
+    def __len__(self):
+        return self.num_total
 
-class PolicyDataloader():
-    def __init__(self):
+class EstimatorDataLoader():
+    def __init__(self) -> None:
         self.vector = DiachatVector()
-        print('Start preprocessing the dataset')
-        with open('convlab2/dpl/etc/data/complete_data.json', 'r') as f:
-            source_data = json.load(f)
-        self.data = source_data
-
-    # def _load_data(self, processed_dir):
-    #     self.data = {}
-    #     for part in ['train', 'val', 'test']:
-    #         with open(os.path.join(processed_dir, '{}.pkl'.format(part)), 'rb') as f:
-    #             self.data[part] = pickle.load(f)
-
-    def create_dataset(self, part, batchsz, part_idx):
+        self.data = {"train": [], "val": [], "test": []}
+    def create_dataset_irl(self, part, batchsz):
         def org(da, act_label, dsv_list: list):
             for dsv in dsv_list:
                 da_temp = []
@@ -34,11 +36,13 @@ class PolicyDataloader():
                 da_temp.append(dsv["slot"] if dsv["slot"] else "none")
                 da_temp.append(dsv["value"] if dsv["value"] else "none")
                 da.append(da_temp)
-        print('Start creating {} dataset'.format(part))
-        partdata = [self.data[i] for i in part_idx]
-        targetdata = []
+        data_dir = "convlab2/dpl/etc/data"
+        source_data = read_zipped_json(os.path.join(data_dir, f"{part}.json.zip"), f"{part}.json",)
+
+        print(f'Start creating {part} dataset')
+
         dst = RuleDST()
-        for session in partdata:
+        for session in source_data:
             dst.init_session()
             for i, utterance in enumerate(session["utterances"]):
                 da = []  # each turn da
@@ -72,31 +76,24 @@ class PolicyDataloader():
                     state['belief_state'] = belief_state
                     state['terminate'] = terminate
                     action = sys_da
-                    targetdata.append([self.vector.state_vectorize(state),
+                    self.data[part].append([self.vector.state_vectorize(state),
                                       self.vector.action_vectorize(action)])
-        
+
+
         s = []
         a = []
-        for item in targetdata:
+        next_s = []
+        for i, item in enumerate(self.data[part]):
             s.append(torch.Tensor(item[0]))
             a.append(torch.Tensor(item[1]))
+            if item[0][-1]:  # terminated
+                next_s.append(torch.Tensor(item[0]))
+            else:
+                next_s.append(torch.Tensor(self.data[part][i + 1][0]))
         s = torch.stack(s)
         a = torch.stack(a)
-        dataset = Dataset(s, a)
+        next_s = torch.stack(next_s)
+        dataset = ActStateDataset(s, a, next_s)
         dataloader = data.DataLoader(dataset, batchsz, True)
+        print('Finish creating {} irl dataset'.format(part))
         return dataloader
-
-
-class Dataset(data.Dataset):
-    def __init__(self, s_s, a_s):
-        self.s_s = s_s
-        self.a_s = a_s
-        self.num_total = len(s_s)
-
-    def __getitem__(self, index):
-        s = self.s_s[index]
-        a = self.a_s[index]
-        return s, a
-
-    def __len__(self):
-        return self.num_total

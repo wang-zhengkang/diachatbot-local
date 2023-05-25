@@ -14,7 +14,7 @@ device = torch.device("cuda:0")
 
 
 class UserPolicyVHUS(UserPolicyVHUSAbstract):
-    def __init__(self, load_from_zip=False):
+    def __init__(self, is_load_model=False):
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json'), 'r') as f:
             config = json.load(f)
         manager = UserDataManager()
@@ -25,7 +25,7 @@ class UserPolicyVHUS(UserPolicyVHUSAbstract):
         self.manager = manager
         self.user.eval()
 
-        if load_from_zip:
+        if is_load_model:
             self.user.load_state_dict(torch.load(
                 'convlab2/policy/vhus/diachat_DG_BiGRU/save/all_data_simulator.mdl'))
             self.user = self.user.cuda()
@@ -60,6 +60,8 @@ class UserPolicyVHUS(UserPolicyVHUSAbstract):
                 for j, (g_dsdone, g_value) in enumerate(self.goal[u_act]):
                     g_domain, g_slot, g_done = g_dsdone.split('-')
                     if g_domain == u_domain and g_slot == u_slot and g_done == 'False':
+                        if '-' in g_value:
+                            g_value = g_value.replace('-', '到')
                         usr_action[i] = usr_action[i] + '-' + g_value
                         self.goal[u_act][j][0] = self.goal[u_act][j][0].replace('False', 'True')
                         break

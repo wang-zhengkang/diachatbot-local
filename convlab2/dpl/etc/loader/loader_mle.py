@@ -5,7 +5,7 @@ import torch.utils.data as data
 
 from convlab2.dpl.etc.util.dataset import ActDataset
 from convlab2.dpl.etc.util.state_structure import default_state
-from convlab2.dpl.etc.loader.dataset_dataloader_ import DiachatDataloader
+from convlab2.dpl.etc.loader.dataset_dataloader import DiachatDataloader
 from convlab2.dpl.etc.loader.module_dataloader import ActPolicyDataloader
 
 

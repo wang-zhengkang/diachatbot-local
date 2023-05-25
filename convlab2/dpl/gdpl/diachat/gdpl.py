@@ -7,12 +7,14 @@ import os
 import sys
 import json
 import zipfile
-from convlab2.policy.policy import Policy
-from convlab2.policy.rlmodule import MultiDiscretePolicy, Value
+
 from convlab2.util.train_util import init_logging_handler
 from convlab2.util.file_util import cached_path
 
-from convlab2.policy.gdpl.diachat.util.vector_diachat import DiachatVector
+from convlab2.dpl.policy import Policy
+from convlab2.dpl.rlmodule import MultiDiscretePolicy, Value
+
+from convlab2.dpl.etc.util.vector_diachat import DiachatVector
 
 
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
@@ -25,9 +27,9 @@ if torch.cuda.is_available():
 
 class GDPL(Policy):
     def __init__(self, is_train=False, dataset="diachat"):
-        with open("convlab2/policy/gdpl/diachat/config.json", "r") as f:
+        with open("convlab2/dpl/gdpl/diachat/config.json", "r") as f:
             cfg = json.load(f)
-        self.save_dir = "convlab2/policy/gdpl/diachat/save"
+        self.save_dir = "convlab2/dpl/gdpl/diachat/save"
         self.save_per_epoch = cfg["save_per_epoch"]
         self.update_round = cfg["update_round"]
         self.optim_batchsz = cfg["batchsz"]
@@ -36,17 +38,12 @@ class GDPL(Policy):
         self.tau = cfg["tau"]
         self.is_train = is_train
         if is_train:
-            init_logging_handler("convlab2/policy/gdpl/diachat/log")
+            init_logging_handler("convlab2/dpl/gdpl/diachat/log")
 
         # construct policy and value network
         if dataset == "diachat":
-            sys_da_file = "convlab2/policy/gdpl/diachat/data/sys_da.json"
-            usr_da_file = "convlab2/policy/gdpl/diachat/data/usr_da.json"
-            # self.state_dim = self.da_dim + self.da_opp_dim + self.belief_state_dim + 1
-            # 186+152+104+6+35+40+1=524
-            self.vector = DiachatVector(sys_da_file, usr_da_file)
-            # self.policy 入度524 出度186
-            self.policy = MultiDiscretePolicy(self.vector.state_dim, cfg["h_dim"], self.vector.da_dim)
+            self.vector = DiachatVector()
+            self.policy = MultiDiscretePolicy(self.vector.state_dim, cfg["h_dim"], self.vector.sys_da_dim)
             self.policy = nn.DataParallel(self.policy, device_ids=DEVICES).to(device=device)
 
         # self.value 入度443 出度1

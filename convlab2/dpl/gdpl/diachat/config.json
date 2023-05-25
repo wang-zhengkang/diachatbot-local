@@ -9,12 +9,12 @@
 	"lr_irl": 0.001,
 	"anneal": 5000,
 	"clip": 0.02,
-	"save_dir": "convlab2/policy/gdpl/diachat/save",
-	"log_dir": "convlab2/policy/gdpl/diachat/log",
+	"save_dir": "convlab2/dpl/gdpl/diachat/save",
+	"log_dir": "convlab2/dpl/gdpl/diachat/log",
 	"save_per_epoch": 50,
 	"update_round": 5,
 	"h_dim": 100,
 	"hi_dim": 50,
 	"hv_dim": 50,
-	"load": "convlab2/policy/gdpl/diachat/save/best"
+	"load": "convlab2/dpl/gdpl/diachat/save/best"
 }

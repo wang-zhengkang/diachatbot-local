@@ -81,51 +81,10 @@ class DiachatVector(Vector):
         self.state_dim = self.sys_da_dim + self.usr_da_dim + self.cur_domain_dim + \
             + self.askfor_ds_dim + self.askforsure_ds_dim + self.belief_state_dim + 1
 
-    def pointer(self, turn):
-        pointer_vector = np.zeros(6 * len(self.db_domains))
-        for domain in self.db_domains:
-            constraint = turn[domain.lower()]['semi'].items()
-            entities = self.db.query(domain.lower(), constraint)
-            pointer_vector = self.one_hot_vector(
-                len(entities), domain, pointer_vector)
-
-        return pointer_vector
-
-    def one_hot_vector(self, num, domain, vector):
-        """Return number of available entities for particular domain."""
-        if domain != 'train':
-            idx = self.db_domains.index(domain)
-            if num == 0:
-                vector[idx * 6: idx * 6 + 6] = np.array([1, 0, 0, 0, 0, 0])
-            elif num == 1:
-                vector[idx * 6: idx * 6 + 6] = np.array([0, 1, 0, 0, 0, 0])
-            elif num == 2:
-                vector[idx * 6: idx * 6 + 6] = np.array([0, 0, 1, 0, 0, 0])
-            elif num == 3:
-                vector[idx * 6: idx * 6 + 6] = np.array([0, 0, 0, 1, 0, 0])
-            elif num == 4:
-                vector[idx * 6: idx * 6 + 6] = np.array([0, 0, 0, 0, 1, 0])
-            elif num >= 5:
-                vector[idx * 6: idx * 6 + 6] = np.array([0, 0, 0, 0, 0, 1])
-        else:
-            idx = self.db_domains.index(domain)
-            if num == 0:
-                vector[idx * 6: idx * 6 + 6] = np.array([1, 0, 0, 0, 0, 0])
-            elif num <= 2:
-                vector[idx * 6: idx * 6 + 6] = np.array([0, 1, 0, 0, 0, 0])
-            elif num <= 5:
-                vector[idx * 6: idx * 6 + 6] = np.array([0, 0, 1, 0, 0, 0])
-            elif num <= 10:
-                vector[idx * 6: idx * 6 + 6] = np.array([0, 0, 0, 1, 0, 0])
-            elif num <= 40:
-                vector[idx * 6: idx * 6 + 6] = np.array([0, 0, 0, 0, 1, 0])
-            elif num > 40:
-                vector[idx * 6: idx * 6 + 6] = np.array([0, 0, 0, 0, 0, 1])
-
-        return vector
 
     def state_vectorize(self, state):
-        """vectorize a state
+        """
+        vectorize a state
 
         Args:
             state (dict):
@@ -189,18 +148,6 @@ class DiachatVector(Vector):
 
         return state_vec
 
-    def dbquery_domain(self, domain):
-        """
-        query entities of specified domain
-        Args:
-            domain string:
-                domain to query
-        Returns:
-            entities list:
-                list of entities of the specified domain
-        """
-        constraint = self.state[domain.lower()]['semi'].items()
-        return self.db.query(domain.lower(), constraint)
 
     def action_devectorize(self, action_vec):
         """
@@ -221,9 +168,9 @@ class DiachatVector(Vector):
         return action
 
     def action_vectorize(self, action):
-        _, _, _, da1 = delexicalize_da(action)
+        _, _, _, da = delexicalize_da(action)
         sys_da_vec = np.zeros(self.sys_da_dim)
-        for a in da1:
+        for a in da:
             if a in self.sys_da2vec:
-                sys_da_vec[self.sys_da2vec[a]] = 1.  # 把这一部分矩阵化
+                sys_da_vec[self.sys_da2vec[a]] = 1.
         return sys_da_vec

@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 import numpy as np
 import torch
 import logging
@@ -10,11 +5,13 @@ import time
 from torch import multiprocessing as mp
 from convlab2.dialog_agent.agent import PipelineAgent
 from convlab2.dialog_agent.env import Environment
-from convlab2.policy.gdpl.diachat.dst import RuleDST
-from convlab2.policy.gdpl.diachat.gdpl import GDPL
-from convlab2.policy.gdpl.diachat.estimator import RewardEstimator
+
 from convlab2.policy.vhus.diachat_DynamicGoal.vhus_diachat import UserPolicyVHUS
-from convlab2.policy.rlmodule import Memory
+from convlab2.dpl.etc.util.dst import RuleDST
+from convlab2.dpl.gdpl.diachat.gdpl import GDPL
+from convlab2.dpl.gdpl.diachat.estimator import RewardEstimator
+from convlab2.dpl.rlmodule import Memory
+
 from argparse import ArgumentParser
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -154,9 +151,10 @@ def update(env, policy, batchsz, epoch, process_num, rewarder):
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument("--load_path", type=str, default="", help="path of model to load")
+    parser.add_argument("--load_path", type=str,
+                        default="convlab2/dpl/mle/diachat/save/train_all_mle.pol.mdl", help="path of model to load")
     parser.add_argument("--batchsz", type=int, default=1024, help="batch size of trajactory sampling")
-    parser.add_argument("--epoch", type=int, default=500, help="number of epochs to train")
+    parser.add_argument("--epoch", type=int, default=200, help="number dof epochs to train")
     parser.add_argument("--process_num", type=int, default=8, help="number of processes of trajactory sampling")
     args = parser.parse_args()
 
@@ -164,8 +162,8 @@ if __name__ == '__main__':
     dst_sys = RuleDST()
 
     policy_sys = GDPL(True)
-    # policy_sys.load(args.load_path)
-    rewarder = RewardEstimator(policy_sys.vector)
+
+    rewarder = RewardEstimator(True)
 
     # not use user dst
     dst_usr = None
