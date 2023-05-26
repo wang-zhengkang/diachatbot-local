@@ -10,6 +10,8 @@ usr_act = ["Accept", "AskFor", "AskForSure", "AskHow", "AskWhy", "Assure", "Chit
 
 domain = ['基本信息', '行为', '治疗', '问题', '运动', '饮食']
 
+# 用户目标分类
+SORTS = ['current', 'AskForSure', 'AskFor', 'AskHow', 'AskWhy', 'Chitchat']
 
 domain_slot = {
     '基本信息': [

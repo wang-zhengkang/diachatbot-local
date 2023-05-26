@@ -13,8 +13,8 @@
 	"log_dir": "convlab2/dpl/gdpl/diachat/log",
 	"save_per_epoch": 50,
 	"update_round": 5,
-	"h_dim": 100,
+	"h_dim": 800,
 	"hi_dim": 50,
 	"hv_dim": 50,
-	"load": "convlab2/dpl/gdpl/diachat/save/best"
+	"load": "convlab2/dpl/gdpl/diachat/save"
 }

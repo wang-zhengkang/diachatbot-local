@@ -44,9 +44,7 @@ class RewardEstimator(object):
             self.irl_iter = iter(self.data_train)
             self.irl_iter_valid = iter(self.data_valid)
             self.irl_iter_test = iter(self.data_test)
-        else:
-            self.data_train = manager.create_dataset_irl('train', cfg['batchsz'])
-            self.irl_iter = iter(self.data_train)
+
 
     def kl_divergence(self, mu, logvar, istrain):
         klds = -0.5 * (1 + logvar - mu.pow(2) - logvar.exp()).sum()

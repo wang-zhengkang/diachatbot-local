@@ -1,6 +1,6 @@
 from convlab2.dpl.mle.diachat.mle import MLE
 from convlab2.dpl.etc.util.dst import RuleDST
-from convlab2.policy.vhus.diachat_DG_BiGRU.vhus_diachat import UserPolicyVHUS
+from convlab2.dpl.vhus.diachat_DG_BiGRU.vhus_diachat import UserPolicyVHUS
 from pprint import pprint
 
 

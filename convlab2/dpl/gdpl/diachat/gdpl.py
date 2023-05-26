@@ -26,7 +26,7 @@ if torch.cuda.is_available():
 
 
 class GDPL(Policy):
-    def __init__(self, is_train=False, dataset="diachat"):
+    def __init__(self, is_train=False):
         with open("convlab2/dpl/gdpl/diachat/config.json", "r") as f:
             cfg = json.load(f)
         self.save_dir = "convlab2/dpl/gdpl/diachat/save"
@@ -36,23 +36,20 @@ class GDPL(Policy):
         self.gamma = cfg["gamma"]
         self.epsilon = cfg["epsilon"]
         self.tau = cfg["tau"]
+        self.load_dir = cfg['load']
         self.is_train = is_train
+        
+        self.vector = DiachatVector()
+        self.policy = MultiDiscretePolicy(self.vector.state_dim, cfg["h_dim"], self.vector.sys_da_dim).to(device=device)
+        self.value = Value(self.vector.state_dim, cfg["hv_dim"]).to(device=device)
+
         if is_train:
             init_logging_handler("convlab2/dpl/gdpl/diachat/log")
-
-        # construct policy and value network
-        if dataset == "diachat":
-            self.vector = DiachatVector()
-            self.policy = MultiDiscretePolicy(self.vector.state_dim, cfg["h_dim"], self.vector.sys_da_dim)
-            self.policy = nn.DataParallel(self.policy, device_ids=DEVICES).to(device=device)
-
-        # self.value 入度443 出度1
-        self.value = Value(self.vector.state_dim, cfg["hv_dim"])
-        self.value = nn.DataParallel(self.value, device_ids=DEVICES).to(device=device)
-
-        if is_train:
-            self.policy_optim = optim.RMSprop(self.policy.module.parameters(), lr=cfg["policy_lr"])
-            self.value_optim = optim.Adam(self.value.module.parameters(), lr=cfg["value_lr"])
+            self.policy_optim = optim.RMSprop(self.policy.parameters(), lr=cfg["policy_lr"])
+            self.value_optim = optim.Adam(self.value.parameters(), lr=cfg["value_lr"])
+            self.load_from_pretrained("convlab2/dpl/mle/diachat/save/train_all_mle.pol.mdl")
+        else:
+            self.load(199)
 
     def predict(self, state):
         """
@@ -63,9 +60,8 @@ class GDPL(Policy):
             action : System act, with the form of (act_type, {slot_name_1: value_1, slot_name_2, value_2, ...})
         """
         s_vec = torch.Tensor(self.vector.state_vectorize(state))
-        a = self.policy.module.select_action(s_vec.to(device=device), self.is_train).cpu()
+        a = self.policy.select_action(s_vec.to(device=device), self.is_train).cpu()
         action = self.vector.action_devectorize(a.numpy())
-        state["system_action"] = action
         return action
 
     def init_session(self):
@@ -126,7 +122,7 @@ class GDPL(Policy):
         # actually, PI_old(s, a) can be saved when interacting with env, so as to save the time of one forward elapsed
         # v: [b, 1] => [b]
         v = self.value(s).squeeze(-1).detach()
-        log_pi_old_sa = self.policy.module.get_log_prob(s, a).detach()
+        log_pi_old_sa = self.policy.get_log_prob(s, a).detach()
 
         # estimate advantage and v_target according to GAE and Bellman Equation
         r = rewarder.estimate(s, a, next_s, log_pi_old_sa).detach()
@@ -174,7 +170,7 @@ class GDPL(Policy):
                 # 2. update policy network by clipping
                 self.policy_optim.zero_grad()
                 # [b, 1]
-                log_pi_sa = self.policy.module.get_log_prob(s_b, a_b)
+                log_pi_sa = self.policy.get_log_prob(s_b, a_b)
                 # ratio = exp(log_Pi(a|s) - log_Pi_old(a|s)) = Pi(a|s) / Pi_old(a|s)
                 # we use log_pi for stability of numerical operation
                 # [b, 1] => [b]
@@ -191,10 +187,10 @@ class GDPL(Policy):
                 # backprop
                 surrogate.backward()
 
-                for p in self.policy.module.parameters():
+                for p in self.policy.parameters():
                     p.grad[p.grad != p.grad] = 0.0
                 # gradient clipping, for stability
-                torch.nn.utils.clip_grad_norm_(self.policy.module.parameters(), 10)
+                torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 10)
                 # self.lock.acquire() # retain lock to update weights
                 self.policy_optim.step()
                 # self.lock.release() # release lock
@@ -202,12 +198,12 @@ class GDPL(Policy):
             value_loss /= optim_chunk_num
             policy_loss /= optim_chunk_num
             logging.debug(
-                "<<dialog policy gdpl>> epoch {}, iteration {}, value, loss {}".format(
+                "<<GDPL>> epoch {}, iteration {}, value, loss {}".format(
                     epoch, i, value_loss
                 )
             )
             logging.debug(
-                "<<dialog policy gdpl>> epoch {}, iteration {}, policy, loss {}".format(
+                "<<GDPL>> epoch {}, iteration {}, policy, loss {}".format(
                     epoch, i, policy_loss
                 )
             )
@@ -220,83 +216,27 @@ class GDPL(Policy):
             os.makedirs(directory)
 
         torch.save(
-            self.value.module.state_dict(),
+            self.value.state_dict(),
             directory + "/" + str(epoch) + "_gdpl.val.mdl",
         )
         torch.save(
-            self.policy.module.state_dict(),
+            self.policy.state_dict(),
             directory + "/" + str(epoch) + "_gdpl.pol.mdl",
         )
 
-        logging.info("<<dialog policy>> epoch {}: saved network to mdl".format(epoch))
+        logging.info("<<GDPL>> epoch {}: saved network to mdl".format(epoch))
 
-    def load(self, filename):
-        value_mdl_candidates = [
-            filename + ".val.mdl",
-            filename + "_gdpl.val.mdl",
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), filename + ".val.mdl"),
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), filename + "_gdpl.val.mdl"),
-        ]
-        for value_mdl in value_mdl_candidates:
-            if os.path.exists(value_mdl):
-                self.value.load_state_dict(torch.load(value_mdl, map_location=DEVICES))
-                logging.info("<<dialog policy>> loaded checkpoint from file: {}".format(value_mdl))
-                break
-
-        policy_mdl_candidates = [
-            filename + ".pol.mdl",
-            filename + "_gdpl.pol.mdl",
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), filename + ".pol.mdl"),
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), filename + "_gdpl.pol.mdl"),
-        ]
-        for policy_mdl in policy_mdl_candidates:
-            if os.path.exists(policy_mdl):
-                self.policy.module.load_state_dict(
-                    torch.load(policy_mdl, map_location=DEVICES)
-                )
-                logging.info(
-                    "<<dialog policy>> loaded checkpoint from file: {}".format(
-                        policy_mdl
-                    )
-                )
-                break
-
-    def load_from_pretrained(self, archive_file, model_file, filename):
-        if not os.path.isfile(archive_file):
-            if not model_file:
-                raise Exception("No model for GDPL Policy is specified!")
-            archive_file = cached_path(model_file)
-        model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "save")
-        if not os.path.exists(model_dir):
-            os.mkdir(model_dir)
-        if not os.path.exists(os.path.join(model_dir, "best_gdpl.pol.mdl")):
-            archive = zipfile.ZipFile(archive_file, "r")
-            archive.extractall(model_dir)
-
-        policy_mdl = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), filename + "_gdpl.pol.mdl"
-        )
+    def load(self, epoch_num):
+        policy_mdl = f"{self.load_dir}/{epoch_num}_gdpl.pol.mdl"
+        value_mdl = f"{self.load_dir}/{epoch_num}_gdpl.val.mdl"
         if os.path.exists(policy_mdl):
-            self.policy.module.load_state_dict(torch.load(policy_mdl, map_location=DEVICES))
-            logging.info("<<dialog policy>> loaded checkpoint from file: {}".format(policy_mdl))
+            self.policy.load_state_dict(torch.load(policy_mdl))
+            print(f"loaded pol model file from: {policy_mdl}")
+        # if os.path.exists(value_mdl):
+        #     self.value.load_state_dict(torch.load(value_mdl))
+        #     print(f"loaded val model file from: {value_mdl}")
 
-        value_mdl = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename + "_gdpl.val.mdl")
-        if os.path.exists(value_mdl):
-            self.value.load_state_dict(torch.load(value_mdl, map_location=DEVICES))
-            logging.info("<<dialog policy>> loaded checkpoint from file: {}".format(value_mdl))
-
-    @classmethod
-    def from_pretrained(
-        cls,
-        archive_file="",
-        model_file="https://convlab.blob.core.windows.net/convlab-2/gdpl_policy_multiwoz.zip",
-        is_train=False,
-        dataset="diachat",
-    ):
-        with open(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json"), "r"
-        ) as f:
-            cfg = json.load(f)
-        model = cls(is_train=is_train, dataset=dataset)
-        model.load_from_pretrained(archive_file, model_file, cfg["load"])
-        return model
+    def load_from_pretrained(self, filename):
+        if os.path.exists(filename):
+            self.policy.load_state_dict(torch.load(filename))
+            logging.info("<<GDPL>> loaded checkpoint from file: {}".format(filename))

@@ -1,6 +1,6 @@
-from convlab2.policy.gdpl.diachat.gdpl import GDPL
-from convlab2.policy.gdpl.diachat.dst import RuleDST
-from convlab2.policy.vhus.diachat_DG_BiGRU.vhus_diachat import UserPolicyVHUS
+from convlab2.dpl.gdpl.diachat.gdpl import GDPL
+from convlab2.dpl.etc.util.dst import RuleDST
+from convlab2.dpl.vhus.diachat_DG_BiGRU.vhus_diachat import UserPolicyVHUS
 from pprint import pprint
 
 
@@ -9,8 +9,7 @@ if __name__ == '__main__':
     dst = RuleDST()
     dst.init_session()
     sys = GDPL()
-    sys.load("449")
-    usr = UserPolicyVHUS(load_from_zip=True)
+    usr = UserPolicyVHUS(is_load_model=True)
     usr.init_session()
 
     print("*"*30 + "Goal" + "*"*30)

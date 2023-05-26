@@ -25,16 +25,13 @@ class MLE(Policy):
             device=DEVICE)
         
         if is_load_model:
-            self.load_from_pretrained(cfg['load'])
+            self.load(cfg['load'])
 
         self.simpleInfer = SimpleInference()
 
-    def load_from_pretrained(self, filename):
-        if os.path.exists(filename):
-            self.policy.load_state_dict(torch.load(filename, map_location=DEVICE))
-            logging.info('<<dialog policy>> loaded checkpoint from file: {}'.format(filename))
-        else:
-            print("模型文件不存在")
+    def load(self, filename):
+        self.policy.load_state_dict(torch.load(filename))
+        print(f"loaded MLE model file from: {filename}")
 
     def format_action_arrays(self, actions):
         arry_actions = []

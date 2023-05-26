@@ -1,8 +1,7 @@
-import os
 import json
 import zipfile
-from convlab2.policy.gdpl.diachat.dst import RuleDST
-from convlab2.policy.gdpl.diachat.gdpl import GDPL
+from convlab2.dpl.etc.util.dst import RuleDST
+from convlab2.dpl.gdpl.diachat.gdpl import GDPL
 from copy import deepcopy
 
 
@@ -157,6 +156,6 @@ if __name__ == '__main__':
     print(f"F1:{F1: .6f}")
 
     # 生成output_file
-    output_file = 'convlab2/policy/gdpl/diachat/test/policy_output.json'
+    output_file = 'convlab2/dpl/gdpl/diachat/test/policy_output.json'
     with open(output_file, 'w', encoding='UTF-8') as f:
         json.dump(policy_output, f, ensure_ascii=False, sort_keys=True, indent=4)
