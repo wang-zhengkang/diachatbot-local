@@ -154,7 +154,7 @@ if __name__ == '__main__':
     parser.add_argument("--load_path", type=str,
                         default="convlab2/dpl/mle/diachat/save/train_all_mle.pol.mdl", help="path of model to load")
     parser.add_argument("--batchsz", type=int, default=1024, help="batch size of trajactory sampling")
-    parser.add_argument("--epoch", type=int, default=200, help="number dof epochs to train")
+    parser.add_argument("--epoch", type=int, default=800, help="number dof epochs to train")
     parser.add_argument("--process_num", type=int, default=8, help="number of processes of trajactory sampling")
     args = parser.parse_args()
 

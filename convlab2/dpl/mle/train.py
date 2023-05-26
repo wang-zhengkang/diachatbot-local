@@ -43,7 +43,7 @@ class MLE_Trainer_Abstract():
             
             if (i+1) % self.print_per_batch == 0:
                 a_loss /= self.print_per_batch
-                logging.debug('<<dialog policy>> epoch {}, iter {}, loss_a:{}'.format(epoch, i, a_loss))
+                logging.debug('<<MLE>> epoch {}, iter {}, loss_a:{}'.format(epoch, i, a_loss))
                 a_loss = 0.
         
         if (epoch+1) % self.save_per_epoch == 0:
@@ -60,9 +60,9 @@ class MLE_Trainer_Abstract():
             a_loss += loss_a.item()
             
         a_loss /= len(self.data_valid)
-        logging.debug('<<dialog policy>> validation, epoch {}, loss_a:{}'.format(epoch, a_loss))
+        logging.debug('<<MLE>> validation, epoch {}, loss_a:{}'.format(epoch, a_loss))
         if a_loss < best:
-            logging.info('<<dialog policy>> best model saved')
+            logging.info('<<MLE>> best model saved')
             best = a_loss
             self.save(self.save_dir, 'best')
             
@@ -72,7 +72,7 @@ class MLE_Trainer_Abstract():
             a_loss += loss_a.item()
             
         a_loss /= len(self.data_test)
-        logging.debug('<<dialog policy>> test, epoch {}, loss_a:{}'.format(epoch, a_loss))
+        logging.debug('<<MLE>> test, epoch {}, loss_a:{}'.format(epoch, a_loss))
         return best
 
     def test(self):
@@ -111,5 +111,5 @@ class MLE_Trainer_Abstract():
 
         torch.save(self.policy.state_dict(), directory + '/' + str(epoch) + '_mle.pol.mdl')
 
-        logging.info('<<dialog policy>> epoch {}: saved network to mdl'.format(epoch))
+        logging.info('<<MLE>> epoch {}: saved network to mdl'.format(epoch))
 

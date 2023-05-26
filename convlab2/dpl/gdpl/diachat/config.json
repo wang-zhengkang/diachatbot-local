@@ -16,5 +16,5 @@
 	"h_dim": 800,
 	"hi_dim": 50,
 	"hv_dim": 50,
-	"load": "convlab2/dpl/gdpl/diachat/save"
+	"load": "convlab2/dpl/gdpl/diachat/load"
 }

@@ -59,9 +59,15 @@ class GDPL(Policy):
         Returns:
             action : System act, with the form of (act_type, {slot_name_1: value_1, slot_name_2, value_2, ...})
         """
-        s_vec = torch.Tensor(self.vector.state_vectorize(state))
+        # 判断传入的state是否已向量化
+        try:
+            s_vec = torch.Tensor(self.vector.state_vectorize(state))
+        except:
+            s_vec = torch.Tensor(state)
         a = self.policy.select_action(s_vec.to(device=device), self.is_train).cpu()
         action = self.vector.action_devectorize(a.numpy())
+        if action == []:
+            action = [['Chitchat', 'none', 'none', 'none']]
         return action
 
     def init_session(self):

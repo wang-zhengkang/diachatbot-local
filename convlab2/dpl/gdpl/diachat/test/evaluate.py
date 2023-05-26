@@ -2,6 +2,7 @@ import json
 import zipfile
 from convlab2.dpl.etc.util.dst import RuleDST
 from convlab2.dpl.gdpl.diachat.gdpl import GDPL
+from convlab2.dpl.mle.diachat.mle import MLE
 from copy import deepcopy
 
 
@@ -117,8 +118,8 @@ def build_test_state():
 
 if __name__ == '__main__':
     data = build_test_state()
-    sys = GDPL()
-    sys.load("199")
+    sys = MLE(True)
+    # sys = GDPL()
 
     policy_output = {}
     seq = 0
