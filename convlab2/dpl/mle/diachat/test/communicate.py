@@ -8,7 +8,7 @@ if __name__ == '__main__':
     # 加载dst sys usr
     dst = RuleDST()
     dst.init_session()
-    sys = MLE(is_load_model=True)
+    sys = MLE(True)
     usr = UserPolicyVHUS(is_load_model=True)
     usr.init_session()
 

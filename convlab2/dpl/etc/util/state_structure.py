@@ -41,6 +41,12 @@ def default_state():
             e.g.: [[a, d, s, v], [a, d, s, v]]
         cur_domain: 本轮用户动作涉及领域
             e.g.: ["问题", "运动"]
+        inform_ds: 用户Inform动作涉及的domain, slot
+            e.g.: [[d, s], [d, s]]
+        askhow_ds: 用户AskHow动作涉及的domain, slot
+            e.g.: [[d, s], [d, s]]
+        askwhy_ds: 用户AskWhy动作涉及的domain, slot
+            e.g.: [[d, s], [d, s]]
         askfor_ds: 用户AskFor动作涉及的domain, slot 系统响应里应该包含Assure
             e.g.: [[d, s], [d, s]]
         askforsure_ds: 用户AskForSure动作涉及的domain, slot 系统响应里应该包含Advice
@@ -52,6 +58,9 @@ def default_state():
         sys_da=[],
         usr_da=[],
         cur_domain=[],
+        inform_ds=[],
+        askhow_ds=[],
+        askwhy_ds=[],
         askfor_ds=[],
         askforsure_ds=[],
         belief_state={},

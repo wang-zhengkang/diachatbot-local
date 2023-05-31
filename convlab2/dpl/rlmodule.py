@@ -115,16 +115,55 @@ class EpsilonGreedyPolicy(nn.Module):
 
 
 class MultiDiscretePolicy(nn.Module):
+    # def __init__(self, s_dim, h_dim, a_dim):
+    #     super(MultiDiscretePolicy, self).__init__()
+    #     # max_len=594
+    #     max_len=s_dim
+    #     # 词向量维度
+    #     word_dim = 256
+    #     # 特征维度
+    #     feture_dim = 64
+    #     self.embeddings = nn.Embedding(s_dim, word_dim)
+    #     self.conv = nn.Sequential(
+    #         nn.Conv1d(word_dim, feture_dim, kernel_size=16),
+    #         nn.ReLU(),
+    #         nn.MaxPool1d(kernel_size=max_len-feture_dim+1)
+    #     )
+    #     self.net = nn.Sequential(
+    #         nn.Linear(feture_dim, h_dim),
+    #         nn.ReLU(),
+    #         nn.Linear(h_dim, h_dim * 2),
+    #         nn.ReLU(),
+    #         nn.Linear(h_dim * 2, h_dim),
+    #         nn.ReLU(),
+    #         nn.Linear(h_dim, a_dim),
+    #     )
+
+    # def forward(self, s):
+    #     # [32, 594]
+    #     # embed: [32, 594, 256]
+    #     # permute: [32, 256, 594]
+    #     s = s.long()
+    #     embed_s = self.embeddings(s)
+    #     embed_s = embed_s.permute(0, 2, 1)
+    #     out = self.conv(embed_s)
+    #     out = out.view(-1, out.size(1))
+    #     a_weights = self.net(out)
+
+    #     return a_weights
+    
     def __init__(self, s_dim, h_dim, a_dim):
         super(MultiDiscretePolicy, self).__init__()
 
-        self.net = nn.Sequential(nn.Linear(s_dim, h_dim),
-                                 nn.ReLU(),
-                                 nn.Linear(h_dim, h_dim * 2),
-                                 nn.ReLU(),
-                                 nn.Linear(h_dim * 2, h_dim),  # 额外加的一层
-                                 nn.ReLU(),
-                                 nn.Linear(h_dim, a_dim))
+        self.net = nn.Sequential(
+            nn.Linear(s_dim, h_dim),
+            nn.ReLU(),
+            nn.Linear(h_dim, h_dim * 2),
+            nn.ReLU(),
+            nn.Linear(h_dim * 2, h_dim),  # 额外加的一层
+            nn.Sigmoid(),
+            nn.Linear(h_dim, a_dim)
+        )
 
     def forward(self, s):
         # [b, s_dim] => [b, a_dim]

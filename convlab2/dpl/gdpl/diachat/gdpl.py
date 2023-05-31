@@ -17,6 +17,7 @@ from convlab2.dpl.rlmodule import MultiDiscretePolicy, Value
 from convlab2.dpl.etc.util.vector_diachat import DiachatVector
 
 
+
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 sys.path.append(root_dir)
 
@@ -47,9 +48,9 @@ class GDPL(Policy):
             init_logging_handler("convlab2/dpl/gdpl/diachat/log")
             self.policy_optim = optim.RMSprop(self.policy.parameters(), lr=cfg["policy_lr"])
             self.value_optim = optim.Adam(self.value.parameters(), lr=cfg["value_lr"])
-            self.load_from_pretrained("convlab2/dpl/mle/diachat/save/train_all_mle.pol.mdl")
+            self.load_from_pretrained("convlab2/dpl/mle/diachat/load/5_fold_mle.pol.mdl")
         else:
-            self.load(199)
+            self.load(799)
 
     def predict(self, state):
         """
@@ -214,7 +215,7 @@ class GDPL(Policy):
                 )
             )
 
-        if (epoch + 1) % self.save_per_epoch == 0:
+        if epoch % self.save_per_epoch == 0:
             self.save(self.save_dir, epoch)
 
     def save(self, directory, epoch):

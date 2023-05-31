@@ -8,9 +8,12 @@ from convlab2.dialog_agent.env import Environment
 
 from convlab2.policy.vhus.diachat_DynamicGoal.vhus_diachat import UserPolicyVHUS
 from convlab2.dpl.etc.util.dst import RuleDST
+from convlab2.dpl.etc.loader.build_data import build_data
 from convlab2.dpl.gdpl.diachat.gdpl import GDPL
 from convlab2.dpl.gdpl.diachat.estimator import RewardEstimator
+from convlab2.dpl.gdpl.diachat.test.evaluate2 import *
 from convlab2.dpl.rlmodule import Memory
+import matplotlib.pyplot as plt
 
 from argparse import ArgumentParser
 
@@ -152,9 +155,9 @@ def update(env, policy, batchsz, epoch, process_num, rewarder):
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("--load_path", type=str,
-                        default="convlab2/dpl/mle/diachat/save/train_all_mle.pol.mdl", help="path of model to load")
+                        default="convlab2/dpl/mle/diachat/load/5_fold_mle.pol.mdl", help="path of model to load")
     parser.add_argument("--batchsz", type=int, default=1024, help="batch size of trajactory sampling")
-    parser.add_argument("--epoch", type=int, default=800, help="number dof epochs to train")
+    parser.add_argument("--epoch", type=int, default=1000, help="number dof epochs to train")
     parser.add_argument("--process_num", type=int, default=8, help="number of processes of trajactory sampling")
     args = parser.parse_args()
 
@@ -175,11 +178,39 @@ if __name__ == '__main__':
 
     env = Environment(None, simulator, None, dst_sys)
 
+    # 加载测试数据
+    with open('convlab2/dpl/etc/data/test.json', 'r') as f:
+        source_data = json.load(f)
+        test_data = build_data(source_data)
+    F1_list = []
+    vector = DiachatVector()
+
     logging.info("Start training.")
     start = int(time.time())
     for i in range(args.epoch):
+        i += 1
         update(env, policy_sys, args.batchsz, i, args.process_num, rewarder)
+        if i % 5 == 0:
+            predict_target_act = []
+            for _, state_act_pair in enumerate(test_data):
+                state_vec = state_act_pair[0]
+                target_act_vec = state_act_pair[1]
+                predict_act = policy_sys.predict(state_vec)
+                target_act = vector.action_devectorize(target_act_vec)
+                temp = [predict_act, target_act]
+                predict_target_act.append(temp)
+            precise, recall, F1 = calculateF1(predict_target_act)
+            F1_list.append(F1)
+
     end = int(time.time())
     m, s = divmod(end - start, 60)
     h, m = divmod(m, 60)
     logging.info(f"Train model cost time {h:0>2d}:{m:0>2d}:{s:0>2d}.")
+
+    
+    # 绘画
+    epoch_list = [(i+1)*5 for i in range(len(F1_list))]
+    plt.plot(epoch_list, F1_list)
+    plt.xlabel('epoch')
+    plt.ylabel('F1')
+    plt.savefig("convlab2/dpl/gdpl/diachat/log/1_recon_loss.jpg")

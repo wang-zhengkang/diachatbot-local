@@ -4,15 +4,19 @@ import logging
 import torch.nn as nn
 import json
 import time
+import zipfile
+
 from sklearn.model_selection import KFold
 from convlab2.util.train_util import to_device, init_logging_handler
 
 from convlab2.dpl.rlmodule import MultiDiscretePolicy
 from convlab2.dpl.etc.util.vector_diachat import DiachatVector
+from convlab2.dpl.etc.util.split_list import split_list
 from convlab2.dpl.etc.loader.policy_dataloader import PolicyDataloader
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 skf = KFold(n_splits=10, shuffle=True, random_state=2023)
+skf1 = KFold(n_splits=9, shuffle=True, random_state=2023)
 
 
 class MLE_Trainer():
@@ -188,6 +192,7 @@ if __name__ == '__main__':
 
     for fold, (train_idx, test_idx) in enumerate(skf.split(data_idx)):
         fold += 1
+        
         agent = MLE_Trainer(cfg, fold, train_idx, test_idx)
         logging.info(f"--------------第{fold}折交叉训练--------------")
         for e in range(cfg['epoch']):
@@ -239,7 +244,28 @@ if __name__ == '__main__':
     logging.info(f"best F1:{best_F1: .6f}, best F1 fold:{best_F1_fold}")
     logging.info(f"worst F1:{worst_F1: .6f}, worst F1 fold:{worst_F1_fold}")
     logging.info(f"--------------Statistics info finish--------------")
-
-        
-        
     
+    for fold, (train_idx, test_idx) in enumerate(skf.split(data_idx)):
+        fold += 1
+        if fold == best_F1_fold:
+            for _, (train_idx, val_idx) in enumerate(skf1.split(train_idx)):
+                train_idx = train_idx
+                val_idx = val_idx
+                print(f"构建best fold:{best_F1_fold}数据集")
+                break
+            dataname = ['test', 'val', 'train']
+            splited_data = {
+                "train_data": [data[i] for i in train_idx],
+                "val_data": [data[i] for i in val_idx],
+                "test_data": [data[i] for i in test_idx]
+            }
+            for name in dataname:
+                print('{}数据集数据量为：{}'.format(name, len(splited_data['{}_data'.format(name)])))
+
+                split_json_file = f"convlab2/dpl/etc/data/{name}.json"
+                with open(split_json_file, 'w', encoding='utf-8') as f:
+                    json.dump(splited_data['{}_data'.format(name)], f, ensure_ascii=False, sort_keys=True, indent=4)
+
+                f = zipfile.ZipFile(split_json_file + '.zip', 'w', zipfile.ZIP_DEFLATED)
+                f.write(split_json_file, arcname='{}.json'.format(name))
+                f.close()

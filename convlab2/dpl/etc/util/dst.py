@@ -48,10 +48,16 @@ class RuleDST(DST):
                         new_entry = default_state()['belief_state'][domain][label][0]
                         new_entry[slot] = value
                         self.state['belief_state'][domain][label].append(new_entry)
+                elif act == 'AskHow':
+                    self.state['askhow_ds'].append([domain, slot, value])
+                elif act == 'AskWhy':
+                    self.state['askwhy_ds'].append([domain, slot, value])       
                 elif act == 'AskFor':
                     self.state['askfor_ds'].append([domain, slot, value])
                 elif act == 'AskForSure':
                     self.state['askforsure_ds'].append([domain, slot, value])
+                if act == 'Inform':
+                    self.state['inform_ds'].append([domain, slot, value])
 
     def update(self, usr_da=None):
         # update usr_action
