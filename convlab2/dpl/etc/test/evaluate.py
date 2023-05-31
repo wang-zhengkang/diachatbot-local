@@ -1,16 +1,10 @@
 import json
+
 from convlab2.dpl.etc.util.vector_diachat import DiachatVector
-from convlab2.dpl.etc.util.state_structure import *
-from convlab2.dpl.etc.util.dst import RuleDST
 from convlab2.dpl.etc.loader.build_data import build_data
+
 from convlab2.dpl.gdpl.diachat.gdpl import GDPL
 from convlab2.dpl.mle.diachat.mle import MLE
-
-from sklearn.model_selection import KFold
-skf = KFold(n_splits=10, shuffle=True, random_state=2023)
-
-
-
 
 
 def calculateF1(predict_target_act):
@@ -38,6 +32,23 @@ def calculateF1(predict_target_act):
     print(f"precise:{precise: .6f}")
     print(f"recall:{recall: .6f}")
     
+    return precise, recall, F1
+
+
+def test(policy_sys):
+    with open('convlab2/dpl/etc/data/test.json', 'r') as f:
+        source_data = json.load(f)
+        test_data = build_data(source_data)
+    vector = DiachatVector()
+    predict_target_act = []
+    for _, state_act_pair in enumerate(test_data):
+        state_vec = state_act_pair[0]
+        target_act_vec = state_act_pair[1]
+        predict_act = policy_sys.predict(state_vec)
+        target_act = vector.action_devectorize(target_act_vec)
+        temp = [predict_act, target_act]
+        predict_target_act.append(temp)
+    precise, recall, F1 = calculateF1(predict_target_act)
     return precise, recall, F1
 
 

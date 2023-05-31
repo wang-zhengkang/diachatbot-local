@@ -26,7 +26,7 @@ class DiachatVector(Vector):
         self.askfor_ds = json.load(open(askfor_ds_file, encoding='UTF-8'))
         self.askforsure_ds = json.load(open(askforsure_ds_file, encoding='UTF-8'))
 
-        self.domain = ['基本信息', '行为', '治疗', '问题', '运动', '饮食']
+        self.domains = domains
         self.vocab_size = vocab_size
 
         self.generate_dict()
@@ -47,9 +47,9 @@ class DiachatVector(Vector):
         self.usr_da_dim = len(self.usr_da_voc)
 
         # cur_domain
-        self.domain2id = dict((a, i) for i, a in enumerate(self.domain))
-        self.id2domain = dict((i, a) for i, a in enumerate(self.domain))
-        self.cur_domain_dim = len(self.domain)
+        self.domain2id = dict((a, i) for i, a in enumerate(self.domains))
+        self.id2domain = dict((i, a) for i, a in enumerate(self.domains))
+        self.cur_domain_dim = len(self.domains)
 
         # inform_ds
         self.inform_ds2vec = dict((a, i) for i, a in enumerate(self.inform_ds))
@@ -135,7 +135,7 @@ class DiachatVector(Vector):
 
         cur_domain_vec = np.zeros(self.cur_domain_dim)
         for domain in state["cur_domain"]:
-            if domain in self.domain:
+            if domain in self.domains:
                 cur_domain_vec[self.domain2id[domain]] = 1.
 
         inform_ds_vec = np.zeros(self.inform_ds_dim)
@@ -191,7 +191,8 @@ class DiachatVector(Vector):
             askwhy_ds_vec,
             askfor_ds_vec,
             askforsure_ds_vec,
-            terminate_vec]
+            terminate_vec
+        ]
 
         return state_vec
 

@@ -59,9 +59,10 @@ class RuleDST(DST):
                 if act == 'Inform':
                     self.state['inform_ds'].append([domain, slot, value])
 
-    def update(self, usr_da=None):
-        # update usr_action
+    def update(self, usr_da=None, terminate = False):
+        # update usr_action, terminate
         self.state['usr_da'] = usr_da
+        self.state['terminate'] = terminate
 
         # update cur_domain
         # update前清空一下

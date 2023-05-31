@@ -1,4 +1,5 @@
 from convlab2.dpl.gdpl.diachat.gdpl import GDPL
+from convlab2.dpl.mle.diachat.mle import MLE
 from convlab2.dpl.etc.util.dst import RuleDST
 from convlab2.dpl.vhus.diachat_DG_BiGRU.vhus_diachat import UserPolicyVHUS
 from pprint import pprint
@@ -8,7 +9,8 @@ if __name__ == '__main__':
     # 加载dst sys usr
     dst = RuleDST()
     dst.init_session()
-    sys = GDPL()
+    # sys = GDPL()
+    sys = MLE(True)
     usr = UserPolicyVHUS(is_load_model=True)
     usr.init_session()
 
